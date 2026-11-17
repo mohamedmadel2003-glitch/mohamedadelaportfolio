@@ -649,6 +649,22 @@ a,a.glass,button,.vid,.pst,.slide,.player,[data-cur]{cursor:pointer!important}
  .cs-stats div{padding:8px 4px}.cs-stats b{font-size:16px}
  .reel-t h3{font-size:22px}.reel-n{font-size:44px}
 }
+/* mobile hero: photo as framed banner, text below, fits the screen */
+@media(max-width:700px){
+ .hero{min-height:100svh;padding:0 6vw 12svh;justify-content:flex-end}
+ .shot{inset:0 0 auto 0;height:auto;aspect-ratio:4/3.4;top:56px;-webkit-mask-image:linear-gradient(#000 80%,transparent);mask-image:linear-gradient(#000 80%,transparent)}
+ .shot img{object-position:50% 30%;animation:none}
+ .shot-ui{top:12px}
+ .hero-txt{margin-top:calc(56px + 100vw*.82)}
+ .hero .l2{font-size:clamp(84px,25vw,120px)}
+}
+@media(max-width:700px){
+ .shot{aspect-ratio:4/3.2}
+ .hero-txt{margin-top:calc(56px + 100vw*.6)}
+ .hero .l2{font-size:clamp(76px,22vw,110px)}
+ .hero{padding-bottom:calc(9svh + 20px)}
+ .hero-txt .fadein{margin-bottom:0}
+}
 
 /* ===== rising tension ===== */
 @keyframes beat{0%,100%{filter:brightness(1)}12%{filter:brightness(1.9)}24%{filter:brightness(1.1)}36%{filter:brightness(1.6)}}
