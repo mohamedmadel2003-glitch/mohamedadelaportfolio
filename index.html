@@ -638,6 +638,17 @@ a,a.glass,button,.vid,.pst,.slide,.player,[data-cur]{cursor:pointer!important}
 @media(min-width:701px){.posters.board:has(>figure:nth-of-type(4)){grid-template-columns:repeat(4,1fr);gap:18px}}
 .seo-sheet{display:none!important}
 .typeline{display:none!important}
+@media(max-width:600px){
+ .tl li{flex-direction:column;gap:2px;align-items:stretch}
+ .tl li b{min-width:0;text-align:right;direction:ltr;font-size:12px}
+ .tl strong{font-size:16px}
+ .glass .pad{padding-left:18px;padding-right:18px}
+}
+@media(max-width:360px){
+ .glass .pad{padding-left:14px;padding-right:14px}
+ .cs-stats div{padding:8px 4px}.cs-stats b{font-size:16px}
+ .reel-t h3{font-size:22px}.reel-n{font-size:44px}
+}
 
 /* ===== rising tension ===== */
 @keyframes beat{0%,100%{filter:brightness(1)}12%{filter:brightness(1.9)}24%{filter:brightness(1.1)}36%{filter:brightness(1.6)}}
