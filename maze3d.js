@@ -18,7 +18,7 @@ function start() {
   const shot = document.querySelector('.hero .shot');
   const ACC = 0xe8541e, BG = 0x0a0a0a;
   const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: !mobile, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.75));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.75));
   renderer.setClearColor(BG, 1);
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(BG, 10, mobile ? 46 : 60);
@@ -57,10 +57,11 @@ function start() {
   const W = (x, y) => new THREE.Vector3(x * S - off + S / 2, 0, y * S - off + S / 2);
 
   // ---- walls ----
-  const H = 1.8;
+  const H = mobile ? 0.7 : 1.8, TW = mobile ? 0.55 : 1; // mobile: low, slim walls
   const tiles = []; for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) if (wall[y][x]) tiles.push([x, y]);
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x2b2a28, roughness: 0.7, metalness: 0.15, emissive: 0x0d0c0b });
-  const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(S, H, S), wallMat, tiles.length);
+  const wallMat = mobile ? new THREE.MeshLambertMaterial({ color: 0x3a3835, transparent: true, opacity: 0.55 })
+    : new THREE.MeshStandardMaterial({ color: 0x2b2a28, roughness: 0.7, metalness: 0.15, emissive: 0x0d0c0b });
+  const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(S * TW, H, S * TW), wallMat, tiles.length);
   const capMat = new THREE.MeshBasicMaterial({ color: 0xece6d9, transparent: true, opacity: 0.16 });
   const caps = new THREE.InstancedMesh(new THREE.BoxGeometry(S * 0.18, 0.04, S * 0.18), capMat, tiles.length);
   const m = new THREE.Matrix4();
@@ -84,7 +85,7 @@ function start() {
   // floor
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(G * S * 4, G * S * 4), new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; scene.add(floor);
-  const grid = new THREE.GridHelper(G * S * 4, G * 4, 0x222222, 0x161616); grid.position.y = 0.01; scene.add(grid);
+  const grid = new THREE.GridHelper(G * S * 4, G * 4, 0x222222, 0x161616); grid.position.y = 0.01; if (!mobile) scene.add(grid);
 
   // ---- orange path (revealed with scroll) ----
   const pts = path.map(([x, y]) => W(x, y).setY(0.08));
@@ -96,13 +97,13 @@ function start() {
   const idxPerSeg = 6 * 6; // radialSegments * 6 indices
   const glowTube = new THREE.TubeGeometry(curve, SEG, 0.34, 6, false);
   const glow = new THREE.Mesh(glowTube, new THREE.MeshBasicMaterial({ color: ACC, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
-  scene.add(glow);
+  if (!mobile) scene.add(glow);
   // faint full route so the way ahead is hinted
   const ghost = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: ACC, transparent: true, opacity: 0.12 }));
   scene.add(ghost);
 
   // head light + marker
-  const head = new THREE.PointLight(ACC, mobile ? 30 : 45, 16, 1.6); scene.add(head);
+  const head = new THREE.PointLight(ACC, 45, 16, 1.6); if (!mobile) scene.add(head);
   const marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), new THREE.MeshBasicMaterial({ color: ACC }));
   scene.add(marker);
 
@@ -111,11 +112,11 @@ function start() {
   const rim = new THREE.DirectionalLight(ACC, 0.5); rim.position.set(30, 10, -30); scene.add(rim);
 
   // dust
-  const DN = mobile ? 300 : 700, dp = new Float32Array(DN * 3);
+  const DN = mobile ? 0 : 700, dp = new Float32Array(DN * 3);
   for (let i = 0; i < DN; i++) { dp[i * 3] = (Math.random() - 0.5) * G * S * 1.4; dp[i * 3 + 1] = Math.random() * 14; dp[i * 3 + 2] = (Math.random() - 0.5) * G * S * 1.4; }
   const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3));
   const dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xffb08a, size: 0.07, transparent: true, opacity: 0.55, depthWrite: false }));
-  scene.add(dust);
+  if (DN) scene.add(dust);
 
   // ---- camera choreography ----
   const startP = W(0, 1), above = new THREE.Vector3(0, G * S * (mobile ? 1.25 : 0.8), G * S * 0.55);
@@ -127,6 +128,7 @@ function start() {
   const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tPos = new THREE.Vector3(), tLook = new THREE.Vector3();
 
+  let lastO1 = '', lastO2 = '';
   function targets() {
     const sy = scrollY, vh = innerHeight, max = Math.max(1, document.documentElement.scrollHeight - vh);
     const hero = Math.min(1, sy / (vh * 1.1));            // 0..1 while leaving the hero
@@ -144,8 +146,9 @@ function start() {
     tLook.set(0, 0, 0).lerp(startP.clone().add(new THREE.Vector3(6, 0, 0)), h);
     if (hero >= 1) { tPos.copy(follow); tLook.copy(followLook); }
     else if (prog <= 0) { /* stay in hero blend */ }
-    cv.style.opacity = (1 - 0.45 * hero).toFixed(3);
-    if (shot) shot.style.opacity = Math.max(0, 1 - hero * 1.5).toFixed(3);
+    const o1 = (1 - 0.45 * hero).toFixed(2), o2 = Math.max(0, 1 - hero * 1.5).toFixed(2);
+    if (o1 !== lastO1) { cv.style.opacity = o1; lastO1 = o1; }
+    if (shot && o2 !== lastO2) { shot.style.opacity = o2; lastO2 = o2; }
     return { u: hero < 1 ? 0 : u, hero };
   }
 
@@ -169,6 +172,7 @@ function start() {
   let running = true;
   document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) requestAnimationFrame(loop); });
 
+  let pX = 0, pY = 0, pZ = 0, idle = 0;
   let lastU = 0, fN = 0, fT = 0, fPrev = 0, dpr = renderer.getPixelRatio();
   function loop(now) {
     if (!running) return;
@@ -191,7 +195,9 @@ function start() {
     lastU += (u - lastU) * 0.1; setReveal(lastU);
     dust.rotation.y = now / 60000;
     glow.material.opacity = 0.28 + Math.sin(now / 450) * 0.12;
-    renderer.render(scene, cam);
+    const moved = Math.abs(cam.position.x - pX) + Math.abs(cam.position.y - pY) + Math.abs(cam.position.z - pZ) + Math.abs(u - lastU);
+    pX = cam.position.x; pY = cam.position.y; pZ = cam.position.z;
+    if (!mobile || moved > 0.002 || intro < 1 || ++idle % 6 === 0) renderer.render(scene, cam);
     requestAnimationFrame(loop);
   }
   document.documentElement.classList.add('has3d');
